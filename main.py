@@ -18,6 +18,7 @@ from_station_input.clear()
 from_station_input.send_keys("GOGOLIN")
 time.sleep(5)
 
+
 # Kliknięcie przycisku "POKAŻ TABLICE"
 search_button = WebDriverWait(driver, 10).until(
     EC.element_to_be_clickable((By.ID, "search-btn"))
