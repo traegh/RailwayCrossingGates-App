@@ -24,12 +24,13 @@ from_station_input = WebDriverWait(driver, 10).until(
     EC.presence_of_element_located((By.ID, "fromStation"))
 )
 time.sleep(round(random.uniform(0.50, 2.10), 2))
-# filling field with "GOGOLIN"
+
+# Fill the field with "GOGOLIN"
 from_station_input.clear()
 from_station_input.send_keys("GOGOLIN")
 time.sleep(round(random.uniform(2.00, 4.99), 2))
 
-# pressing button "POKAŻ TABLICE"
+# Click the "SHOW TIMETABLE" button
 search_button = WebDriverWait(driver, 10).until(
     EC.element_to_be_clickable((By.ID, "search-btn"))
 )
@@ -43,30 +44,34 @@ def extract_delay_value(text):
         return match.group(1)
     return ""
 
-# saving times and ICC/R tags
+
+# Save times and ICC/R tags
 timetable = {}
-time_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time")[0:4]
-tag_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .mobile-carrier")[0:4]
-delay_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time[data-difference]")[0:4]
+time_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time")[0:5]
+tag_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .mobile-carrier")[0:5]
+delay_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time[data-difference]")[0:5]
 
 for i in range(len(time_elements)):
-    time_value = time_elements[i].text; print(f'time_value={time_value}')
+    time_value = time_elements[i].text
     tag_value = tag_elements[i].text
     if i < len(delay_elements):
         delay_text = delay_elements[i].get_attribute("data-difference")
-        delay_value = extract_delay_value(html.unescape(delay_text)); print(f'delay_value={delay_value}')
+        delay_value = extract_delay_value(html.unescape(delay_text))
 
-        # Sprawdź, czy delay_value jest puste i czy istnieje inny czas z delay_value
         if not delay_value and any(
                 delay_elements[j].get_attribute("data-difference") for j in range(i + 1, len(delay_elements))):
-            continue  # Pomijamy ten czas, który nie ma łatki opóźnienia i istnieje inny czas z łatką opóźnienia
+            continue
 
-        new_time_value = add_delay(time_value, delay_value)
-    else:
-        delay_value = ""
-        new_time_value = time_value
-    timetable[tag_value] = (new_time_value, delay_value)
+    timetable[tag_value] = (time_value, delay_value)
 
-driver.quit(); print("\n- - -\n")
+driver.quit()
+
+# Print the timetable
+# Print the timetable
 for tag, time_value in timetable.items():
-    print(f'[{tag}] {time_value[0]} // {time_value[1]}')
+    delay_value = time_value[1]
+    time_with_delays = add_delay(time_value[0], delay_value)
+    if delay_value:
+        print(f'{tag} - {time_value[0]} (+{delay_value}) = {time_with_delays}')
+    else:
+        print(f'{tag} - {time_value[0]}')
