@@ -8,7 +8,8 @@ import re
 import html
 import random
 import pymysql
-import colorama
+from colorama import init, Fore, Style
+init()
 
 
 # Basic anti-bot detection measures
@@ -87,7 +88,9 @@ def print_timetable(timetable):
         delay_value = time_value[1]
         time_with_delays = add_delay(time_value[0], delay_value)
         if delay_value:
-            print(f'{tag} - {time_value[0]} (+{delay_value}) = {time_with_delays}')
+            print(f'{Fore.CYAN}{tag}{Fore.RESET} - {time_value[0]} '
+                  f'({Fore.RED}+{delay_value}{Fore.RESET}) ='
+                  f' {Fore.YELLOW}{time_with_delays}{Fore.RESET}')
         else:
             print(f'{tag} - {time_value[0]}')
 
