@@ -149,6 +149,7 @@ def main():
     timetable = get_timetable(driver); driver.quit()
     save_to_database(timetable); print_timetable(timetable)
 
+
 while(True):
     clear()
     if __name__ == "__main__":
