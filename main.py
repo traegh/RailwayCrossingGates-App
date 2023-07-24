@@ -8,20 +8,37 @@ import re
 import html
 import random
 import pymysql
+import os
 from colorama import init, Fore, Style
 init()
 
 
+options = webdriver.ChromeOptions()
+driver = webdriver.Chrome(options=options)
+
 # Basic anti-bot detection measures
 def configure_driver():
-    options = webdriver.ChromeOptions()
+    global driver, options
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
-    driver = webdriver.Chrome(options=options)
+    resolutions = [
+        (1920, 1080),  # Full HD
+        (1366, 768),  # HD
+        (1600, 900),  # HD+
+        (1280, 1024),  # SXGA
+        (1440, 900),  # WXGA+
+        (1280, 800),  # WXGA
+        (1680, 1050),  # WSXGA+
+        (1024, 768)  # XGA
+    ]
+    r = random.choice(resolutions)
+    width, height = r
+    options.add_argument(f"--window-size={width},{height}")
+    print(f'<<<|{width}x{height}|>>>')
+    # options.add_argument("--headless")
     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
     return driver
-
 
 def add_delay(time_value, delay_value):
     time_format = "%H:%M"
@@ -31,13 +48,11 @@ def add_delay(time_value, delay_value):
     new_time_value = new_time_obj.strftime(time_format)
     return new_time_value
 
-
 def extract_delay_value(text):
     match = re.search(r"\+(\d+)", text)
     if match:
         return match.group(1)
     return ""
-
 
 def get_timetable(driver):
     timetable = {}
@@ -57,9 +72,7 @@ def get_timetable(driver):
                 continue
 
             timetable[tag_value] = (time_value, delay_value)
-
     return timetable
-
 
 def save_to_database(timetable):
     conn = pymysql.connect(
@@ -69,19 +82,16 @@ def save_to_database(timetable):
         database="crud_maker"
     )
     cursor = conn.cursor()
-
     for tag, time_value in timetable.items():
         delay_value = time_value[1]
         time_with_delays = add_delay(time_value[0], delay_value)
-        data_value = datetime.now().strftime("%d/%m/%y")
+        data_value = datetime.now().strftime("%y/%m/%d")
 
         query = "INSERT INTO hours (data, train_tag, time) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE time=%s"
         cursor.execute(query, (data_value, tag, time_with_delays, time_with_delays))
         conn.commit()
-
     cursor.close()
     conn.close()
-
 
 def print_timetable(timetable):
     for tag, time_value in timetable.items():
@@ -94,11 +104,29 @@ def print_timetable(timetable):
         else:
             print(f'{tag} - {time_value[0]}')
 
+def clear():
+    cls = lambda: os.system('cls' if os.name == 'nt' else 'clear');
+    cls()
+
+def timeout():
+    x = round(random.uniform(149, 193), 2)
+    while x > 0:
+        if (x > 0.9 * 193):
+            print(Fore.GREEN)
+        elif (x < 0.9 * 193):
+            print(Fore.YELLOW)
+        elif (x < 0.25 * 193):
+            print(Fore.RED)
+        print(f'> {round(x, 2)}. . .');
+        time.sleep(0.01);
+        x = x - 0.01
+        cls = lambda: os.system('cls' if os.name == 'nt' else 'clear');
+        cls();
+        print(Fore.RESET)
 
 def main():
     driver = configure_driver()
     driver.get("https://bilkom.pl/stacje/tablica")
-
     from_station_input = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.ID, "fromStation"))
     )
@@ -118,12 +146,12 @@ def main():
     search_button.click()
     time.sleep(round(random.uniform(1.20, 3.99), 2))  # anti-anti-bot
 
-    timetable = get_timetable(driver)
-    driver.quit()
+    timetable = get_timetable(driver); driver.quit()
+    save_to_database(timetable); print_timetable(timetable)
 
-    save_to_database(timetable)
-    print_timetable(timetable)
-
-
-if __name__ == "__main__":
-    main()
+while(True):
+    clear()
+    if __name__ == "__main__":
+        main()
+    time.sleep(6)
+    timeout()
