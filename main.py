@@ -1,27 +1,46 @@
+import threading
+import random
+import time
+import os
+from colorama import init, Fore, Style
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime, timedelta
-import time
 import re
 import html
-import random
 import pymysql
-import os
-from colorama import init, Fore, Style
-init()
 
+init()
+# Basic anti-bot detection measures pt1
+user_agents = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_6_1) AppleWebKit/537.36 (KHTML, like Gecko) Version/14.1.2 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 15_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.1 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (Linux; Android 11; SM-G973F Build/RP1A.201005.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/94.0.4606.71 Mobile Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36 Edg/94.0.992.50",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.6; rv:93.0) Gecko/20100101 Firefox/93.0",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36 OPR/80.0.4170.72"
+]
 
 options = webdriver.ChromeOptions()
 driver = webdriver.Chrome(options=options)
+options.add_argument("--headless")
+last_timetable = None
 
-# Basic anti-bot detection measures
+# Basic anti-bot detection measures pt2
 def configure_driver():
     global driver, options
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
+
+    user_agent = random.choice(user_agents)
+    options.add_argument(f"--user-agent={user_agent}")
     resolutions = [
         (1920, 1080),  # Full HD
         (1366, 768),  # HD
@@ -36,7 +55,6 @@ def configure_driver():
     width, height = r
     options.add_argument(f"--window-size={width},{height}")
     print(f'<<<|{width}x{height}|>>>')
-    # options.add_argument("--headless")
     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
     return driver
 
@@ -56,9 +74,9 @@ def extract_delay_value(text):
 
 def get_timetable(driver):
     timetable = {}
-    time_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time")[0:5]
-    tag_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .mobile-carrier")[0:5]
-    delay_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time[data-difference]")[0:5]
+    time_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time")[0:2]
+    tag_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .mobile-carrier")[0:2]
+    delay_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time[data-difference]")[0:2]
 
     for i in range(len(time_elements)):
         time_value = time_elements[i].text
@@ -94,35 +112,48 @@ def save_to_database(timetable):
     conn.close()
 
 def print_timetable(timetable):
-    for tag, time_value in timetable.items():
-        delay_value = time_value[1]
-        time_with_delays = add_delay(time_value[0], delay_value)
-        if delay_value:
-            print(f'{Fore.CYAN}{tag}{Fore.RESET} - {time_value[0]} '
-                  f'({Fore.RED}+{delay_value}{Fore.RESET}) ='
-                  f' {Fore.YELLOW}{time_with_delays}{Fore.RESET}')
-        else:
-            print(f'{tag} - {time_value[0]}')
+    global last_timetable
+    with open("timetable.txt", "w") as file:
+        for tag, time_value in timetable.items():
+            delay_value = time_value[1]
+            time_with_delays = add_delay(time_value[0], delay_value)
+            if delay_value:
+                file.write(f'{tag} - {time_value[0]} '
+                           f'(+{delay_value}) ='
+                           f'{time_with_delays}\n')
+                print(f'{Fore.CYAN}{tag}{Fore.RESET} - {time_value[0]} '
+                      f'({Fore.RED}+{delay_value}{Fore.RESET}) = '
+                      f' {Fore.YELLOW}{time_with_delays}{Fore.RESET}')
+            else:
+                file.write(f'{tag} - {time_value[0]}\n')
+    last_timetable = timetable.copy()
 
 def clear():
     cls = lambda: os.system('cls' if os.name == 'nt' else 'clear');
     cls()
 
-def timeout():
-    x = round(random.uniform(149, 193), 2)
-    while x > 0:
-        if (x > 0.9 * 193):
-            print(Fore.GREEN)
-        elif (x < 0.9 * 193):
-            print(Fore.YELLOW)
-        elif (x < 0.25 * 193):
-            print(Fore.RED)
-        print(f'> {round(x, 2)}. . .');
-        time.sleep(0.01);
-        x = x - 0.01
-        cls = lambda: os.system('cls' if os.name == 'nt' else 'clear');
-        cls();
-        print(Fore.RESET)
+# def timeout():
+#     x = round(random.uniform(149, 193), 2)
+#     global last_timetable
+#     while x > 0:
+#         if (x > 0.9 * 193):
+#             print(Fore.GREEN)
+#         elif (x < 0.9 * 193):
+#             print(Fore.YELLOW)
+#         elif (x < 0.25 * 193):
+#             print(Fore.RED)
+#         print(f'> {round(x, 2)}. . .')
+#
+#         if last_timetable:
+#             print("Ostatnia znana data zamkniecia:")
+#             with open("timetable.txt", "r") as file:
+#                 print(f'{Fore.CYAN}{file.read()}{Fore.RESET}')
+#
+#         time.sleep(0.01)
+#         x = x - 0.01
+#         cls = lambda: os.system('cls' if os.name == 'nt' else 'clear')
+#         cls()
+#         print(Fore.RESET)
 
 def main():
     driver = configure_driver()
@@ -149,10 +180,5 @@ def main():
     timetable = get_timetable(driver); driver.quit()
     save_to_database(timetable); print_timetable(timetable)
 
-
-while(True):
-    clear()
-    if __name__ == "__main__":
-        main()
-    time.sleep(6)
-    timeout()
+main()
+# no delay since it's more of a shell's script work to do
