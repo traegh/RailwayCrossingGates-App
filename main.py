@@ -27,14 +27,11 @@ user_agents = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36 OPR/80.0.4170.72"
 ]
 
-options = webdriver.ChromeOptions()
-driver = webdriver.Chrome(options=options)
-options.add_argument("--headless")
 last_timetable = None
 
 # Basic anti-bot detection measures pt2
 def configure_driver():
-    global driver, options
+    options = webdriver.ChromeOptions()
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
@@ -54,6 +51,9 @@ def configure_driver():
     r = random.choice(resolutions)
     width, height = r
     options.add_argument(f"--window-size={width},{height}")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--headless")
+    driver = webdriver.Chrome(options=options)
     print(f'<<<|{width}x{height}|>>>')
     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
     return driver
