@@ -132,28 +132,6 @@ def clear():
     cls = lambda: os.system('cls' if os.name == 'nt' else 'clear');
     cls()
 
-# def timeout():
-#     x = round(random.uniform(149, 193), 2)
-#     global last_timetable
-#     while x > 0:
-#         if (x > 0.9 * 193):
-#             print(Fore.GREEN)
-#         elif (x < 0.9 * 193):
-#             print(Fore.YELLOW)
-#         elif (x < 0.25 * 193):
-#             print(Fore.RED)
-#         print(f'> {round(x, 2)}. . .')
-#
-#         if last_timetable:
-#             print("Ostatnia znana data zamkniecia:")
-#             with open("timetable.txt", "r") as file:
-#                 print(f'{Fore.CYAN}{file.read()}{Fore.RESET}')
-#
-#         time.sleep(0.01)
-#         x = x - 0.01
-#         cls = lambda: os.system('cls' if os.name == 'nt' else 'clear')
-#         cls()
-#         print(Fore.RESET)
 
 def main():
     driver = configure_driver()
