@@ -74,9 +74,9 @@ def extract_delay_value(text):
 
 def get_timetable(driver):
     timetable = {}
-    time_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time")[0:2]
-    tag_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .mobile-carrier")[0:2]
-    delay_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time[data-difference]")[0:2]
+    time_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time")[0:1]
+    tag_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .mobile-carrier")[0:1]
+    delay_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time[data-difference]")[0:1]
 
     for i in range(len(time_elements)):
         time_value = time_elements[i].text
@@ -111,21 +111,25 @@ def save_to_database(timetable):
     cursor.close()
     conn.close()
 
+
 def print_timetable(timetable):
     global last_timetable
-    with open("timetable.txt", "w") as file:
+    timetable_file_path = "timetable.txt"
+    czas_file_path = "/Users/mrarab/Desktop/railway crossing/website/czas.txt"
+
+    with open(timetable_file_path, "w") as timetable_file, open(czas_file_path, "w") as czas_file:
         for tag, time_value in timetable.items():
             delay_value = time_value[1]
             time_with_delays = add_delay(time_value[0], delay_value)
             if delay_value:
-                file.write(f'{tag} - {time_value[0]} '
-                           f'(+{delay_value}) ='
-                           f'{time_with_delays}\n')
+                timetable_file.write(f'{time_with_delays}\n')
+                czas_file.write(f'{time_with_delays}\n')  # czas.txt
                 print(f'{Fore.CYAN}{tag}{Fore.RESET} - {time_value[0]} '
                       f'({Fore.RED}+{delay_value}{Fore.RESET}) = '
                       f' {Fore.YELLOW}{time_with_delays}{Fore.RESET}')
             else:
-                file.write(f'{tag} - {time_value[0]}\n')
+                timetable_file.write(f'{tag} - {time_value[0]}\n')
+                czas_file.write(f'{time_value[0]}\n')  # save czas.txt
     last_timetable = timetable.copy()
 
 def clear():
