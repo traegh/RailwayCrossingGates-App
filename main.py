@@ -114,16 +114,16 @@ def save_to_database(timetable):
 
 def print_timetable(timetable):
     global last_timetable
-    timetable_file_path = "timetable.txt"
-    czas_file_path = "/Users/mrarab/Desktop/railway crossing/website/czas.txt"
+    TIMETABLE_FILE_PATH = "timetable.txt"
+    CZAS_FILE_PATH = "/Users/mrarab/Desktop/railway crossing/website/czas.txt"
 
-    with open(timetable_file_path, "w") as timetable_file, open(czas_file_path, "w") as czas_file:
+    with open(TIMETABLE_FILE_PATH, "w") as timetable_file, open(CZAS_FILE_PATH, "w") as czas_file:
         for tag, time_value in timetable.items():
             delay_value = time_value[1]
             time_with_delays = add_delay(time_value[0], delay_value)
             if delay_value:
                 timetable_file.write(f'{time_with_delays}\n')
-                czas_file.write(f'{time_with_delays}\n')  # czas.txt
+                czas_file.write(f'{time_with_delays}')  # czas.txt
                 print(f'{Fore.CYAN}{tag}{Fore.RESET} - {time_value[0]} '
                       f'({Fore.RED}+{delay_value}{Fore.RESET}) = '
                       f' {Fore.YELLOW}{time_with_delays}{Fore.RESET}')
