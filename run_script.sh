@@ -18,7 +18,7 @@ while true; do
         python3 /Users/mrarab/Documents/GitHub/RailwayCrossingGates-App/main.py
         sleep 10
         kill
-        x=$((75 + RANDOM % 23))
+        x=$((71 + RANDOM % 23))
         echo "[$time] awaiting for assignment in $x seconds. . . "
         sleep $x
     else
