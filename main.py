@@ -1,4 +1,3 @@
-import threading
 import random
 import time
 import os
@@ -13,8 +12,9 @@ import html
 import pymysql
 
 init()
-# Basic anti-bot detection measures pt1
-user_agents = [
+
+# List of user agents for anti-bot detection
+USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_6_1) AppleWebKit/537.36 (KHTML, like Gecko) Version/14.1.2 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0",
@@ -27,16 +27,15 @@ user_agents = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36 OPR/80.0.4170.72"
 ]
 
-last_timetable = None
+LAST_TIMETABLE = None
 
-# Basic anti-bot detection measures pt2
 def configure_driver():
     options = webdriver.ChromeOptions()
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
 
-    user_agent = random.choice(user_agents)
+    user_agent = random.choice(USER_AGENTS)
     options.add_argument(f"--user-agent={user_agent}")
     resolutions = [
         (1920, 1080),  # Full HD
@@ -48,8 +47,8 @@ def configure_driver():
         (1680, 1050),  # WSXGA+
         (1024, 768)  # XGA
     ]
-    r = random.choice(resolutions)
-    width, height = r
+    resolution = random.choice(resolutions)
+    width, height = resolution
     options.add_argument(f"--window-size={width},{height}")
     options.add_argument("--disable-gpu")
     options.add_argument("--headless")
@@ -58,32 +57,40 @@ def configure_driver():
     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
     return driver
 
-def add_delay(time_value, delay_value):
-    time_format = "%H:%M"
-    time_obj = datetime.strptime(time_value, time_format)
-    delay_obj = timedelta(minutes=int(delay_value))
-    new_time_obj = time_obj + delay_obj
-    new_time_value = new_time_obj.strftime(time_format)
-    return new_time_value
 
-def extract_delay_value(text):
-    match = re.search(r"\+(\d+)", text)
+def clear_console():
+    clear_command = lambda: os.system('cls' if os.name == 'nt' else 'clear')
+    clear_command()
+
+
+def calculate_delayed_time(base_time, delay_minutes):
+    time_format = "%H:%M"
+    base_time_obj = datetime.strptime(base_time, time_format)
+    delay_obj = timedelta(minutes=int(delay_minutes))
+    delayed_time_obj = base_time_obj + delay_obj
+    delayed_time = delayed_time_obj.strftime(time_format)
+    return delayed_time
+
+
+def extract_delay_minutes(delay_text):
+    match = re.search(r"\+(\d+)", delay_text)
     if match:
         return match.group(1)
     return ""
 
-def get_timetable(driver):
+
+def get_train_timetable(driver):
     timetable = {}
-    time_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time")[0:1]
-    tag_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .mobile-carrier")[0:1]
-    delay_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time[data-difference]")[0:1]
+    time_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time")[0:3]
+    tag_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .mobile-carrier")[0:3]
+    delay_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time[data-difference]")[0:3]
 
     for i in range(len(time_elements)):
         time_value = time_elements[i].text
         tag_value = tag_elements[i].text
         if i < len(delay_elements):
             delay_text = delay_elements[i].get_attribute("data-difference")
-            delay_value = extract_delay_value(html.unescape(delay_text))
+            delay_value = extract_delay_minutes(html.unescape(delay_text))
 
             if not delay_value and any(
                     delay_elements[j].get_attribute("data-difference") for j in range(i + 1, len(delay_elements))):
@@ -92,7 +99,8 @@ def get_timetable(driver):
             timetable[tag_value] = (time_value, delay_value)
     return timetable
 
-def save_to_database(timetable):
+
+def save_timetable_to_database(timetable):
     conn = pymysql.connect(
         host="db4free.net",
         user="crud_maker",
@@ -102,7 +110,7 @@ def save_to_database(timetable):
     cursor = conn.cursor()
     for tag, time_value in timetable.items():
         delay_value = time_value[1]
-        time_with_delays = add_delay(time_value[0], delay_value)
+        time_with_delays = calculate_delayed_time(time_value[0], delay_value)
         data_value = datetime.now().strftime("%y/%m/%d")
 
         query = "INSERT INTO hours (data, train_tag, time) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE time=%s"
@@ -112,34 +120,36 @@ def save_to_database(timetable):
     conn.close()
 
 
-def print_timetable(timetable):
-    global last_timetable
+def sort_timetable_by_time(timetable):
+    sorted_timetable = sorted(timetable.items(), key=lambda x: calculate_delayed_time(x[1][0], x[1][1]))
+    return dict(sorted_timetable)
+
+
+def display_timetable(timetable):
+    global LAST_TIMETABLE
     TIMETABLE_FILE_PATH = "timetable.txt"
     CZAS_FILE_PATH = "/Users/mrarab/Desktop/railway crossing/strona/czas.txt"
 
-    with open(TIMETABLE_FILE_PATH, "w") as timetable_file, open(CZAS_FILE_PATH, "w") as czas_file:
-        for tag, time_value in timetable.items():
-            delay_value = time_value[1]
-            time_with_delays = add_delay(time_value[0], delay_value)
-            if delay_value:
-                timetable_file.write(f'{time_with_delays}\n')
-                czas_file.write(f'{time_with_delays}')  # czas.txt
-                print(f'{Fore.CYAN}{tag}{Fore.RESET} - {time_value[0]} '
-                      f'({Fore.RED}+{delay_value}{Fore.RESET}) = '
-                      f' {Fore.YELLOW}{time_with_delays}{Fore.RESET}')
-            else:
-                timetable_file.write(f'{tag} - {time_value[0]}\n')
-                czas_file.write(f'{time_value[0]}\n')  # save czas.txt
-    last_timetable = timetable.copy()
+    sorted_timetable = sort_timetable_by_time(timetable)
 
-def clear():
-    cls = lambda: os.system('cls' if os.name == 'nt' else 'clear');
-    cls()
+    closest_time = list(sorted_timetable.keys())[0]
+    closest_time_value = sorted_timetable[closest_time][0]
+    closest_time_delay = sorted_timetable[closest_time][1]
+    closest_time_with_delay = calculate_delayed_time(closest_time_value, closest_time_delay)
+
+    print(f'{Fore.CYAN}{closest_time}{Fore.RESET} - {closest_time_value} '
+          f'({Fore.RED}+{closest_time_delay}{Fore.RESET}) = {Fore.YELLOW}{closest_time_with_delay}{Fore.RESET}')
+
+    with open(CZAS_FILE_PATH, "w") as czas_file:
+        czas_file.write(closest_time_with_delay)  # save to czas.txt
+
+    LAST_TIMETABLE = sorted_timetable.copy()
 
 
 def main():
     driver = configure_driver()
     driver.get("https://bilkom.pl/stacje/tablica")
+
     from_station_input = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.ID, "fromStation"))
     )
@@ -147,20 +157,20 @@ def main():
     time.sleep(round(random.uniform(0.50, 2.10), 2))  # anti-anti-bot
     driver.execute_script('window.scrollTo(0, 3)')  # anti-anti-bot
 
-    # Fill the field with "GOGOLIN"
     from_station_input.clear()
     from_station_input.send_keys("GOGOLIN")
     time.sleep(round(random.uniform(2.00, 4.99), 2))  # anti-anti-bot
 
-    # Click the "POKAZ TABLICE" button
     search_button = WebDriverWait(driver, 10).until(
         EC.element_to_be_clickable((By.ID, "search-btn"))
     )
     search_button.click()
     time.sleep(round(random.uniform(1.20, 3.99), 2))  # anti-anti-bot
 
-    timetable = get_timetable(driver); driver.quit()
-    save_to_database(timetable); print_timetable(timetable)
+    timetable = get_train_timetable(driver)
+    driver.quit()
+
+    save_timetable_to_database(timetable)
+    display_timetable(timetable)
 
 main()
-# no delay since it's more of a shell's script work to do
