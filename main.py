@@ -115,7 +115,7 @@ def save_to_database(timetable):
 def print_timetable(timetable):
     global last_timetable
     TIMETABLE_FILE_PATH = "timetable.txt"
-    CZAS_FILE_PATH = "/Users/mrarab/Desktop/railway crossing/website/czas.txt"
+    CZAS_FILE_PATH = "/Users/mrarab/Desktop/railway crossing/strona/czas.txt"
 
     with open(TIMETABLE_FILE_PATH, "w") as timetable_file, open(CZAS_FILE_PATH, "w") as czas_file:
         for tag, time_value in timetable.items():

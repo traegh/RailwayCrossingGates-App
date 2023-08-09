@@ -9,18 +9,20 @@ trap kill SIGINT
 
 while true; do
     current_hour=$(date +"%H")
+    current_minute=$(date +"%M")
+    time=$(date +"%H:%M:%S")
 
     # while(time != (24-3 AM))
     if [ "$current_hour" -ge 3 ] && [ "$current_hour" -lt 24 ]; then
-        echo "[G: $current_hour] launching main.py... "
+        echo "[G: $current_hour:$current_minute] launching script. . . "
         python3 /Users/mrarab/Documents/GitHub/RailwayCrossingGates-App/main.py
         sleep 10
         kill
-        x=$((140 + RANDOM % 10))
-        time=$(date +"%H:%M:%S")
-        echo "[$time] awaiting for my work in $x seconds. . . "
+        x=$((75 + RANDOM % 23))
+        echo "[$time] awaiting for assignment in $x seconds. . . "
         sleep $x
     else
-        echo "[G: $current_hour] Maintenance. Time between 24:00-3:00 detected, script will continue sometime later."
+        echo " <<< Time between 24:00-3:00 detected >>> "
+        echo "[G: $current_hour:$current_minute] Script won't scrap the site until it's 3 AM."
     fi
 done
