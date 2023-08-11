@@ -81,9 +81,9 @@ def extract_delay_minutes(delay_text):
 
 def get_train_timetable(driver):
     timetable = {}
-    time_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time")[0:3]
-    tag_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .mobile-carrier")[0:3]
-    delay_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time[data-difference]")[0:3]
+    time_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time")[0:5]
+    tag_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .mobile-carrier")[0:5]
+    delay_elements = driver.find_elements(By.CSS_SELECTOR, ".timeTableRow .time[data-difference]")[0:5]
 
     for i in range(len(time_elements)):
         time_value = time_elements[i].text
@@ -127,7 +127,6 @@ def sort_timetable_by_time(timetable):
 
 def display_timetable(timetable):
     global LAST_TIMETABLE
-    TIMETABLE_FILE_PATH = "timetable.txt"
     CZAS_FILE_PATH = "/Users/mrarab/Desktop/railway crossing/strona/czas.txt"
 
     sorted_timetable = sort_timetable_by_time(timetable)
