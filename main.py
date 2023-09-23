@@ -1,8 +1,9 @@
 import random
 import time
 import os
-from colorama import init, Fore, Style
+from colorama import init, Fore
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -34,6 +35,8 @@ def configure_driver():
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
+    options.add_argument("--disable-gpu")
+    options.add_argument("--headless")
 
     user_agent = random.choice(USER_AGENTS)
     options.add_argument(f"--user-agent={user_agent}")
@@ -50,13 +53,13 @@ def configure_driver():
     resolution = random.choice(resolutions)
     width, height = resolution
     options.add_argument(f"--window-size={width},{height}")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--headless")
-    driver = webdriver.Chrome(options=options)
     print(f'<<<|{width}x{height}|>>>')
+
+    serv = Service(r"/Users/mrarab/Documents/GitHub/RailwayCrossingGates-App/drivers/chromedriver")
+    driver = webdriver.Chrome(service=serv)
+
     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
     return driver
-
 
 def clear_console():
     clear_command = lambda: os.system('cls' if os.name == 'nt' else 'clear')
